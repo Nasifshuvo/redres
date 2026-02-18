@@ -1,129 +1,159 @@
 ---
 import { client } from '../lib/sanity';
 
-const buffetData = await client.fetch(`*[_type == "buffet"][0]{
-  title,
-  description,
-  priceAdult,
-  "images": images[].asset->url,
-  availableSlots,
-  enabledDates
-}`);
+let buffetData = null;
+try {
+  buffetData = await client.fetch(`*[_type == "buffet"][0]{
+    title,
+    description,
+    priceAdult,
+    "images": images[].asset->url,
+    availableSlots,
+    enabledDates
+  }`);
+} catch (e) {
+  console.error("Sanity fetch error:", e);
+}
+
+const hasData = buffetData !== null;
 ---
 
 <html lang="en">
 	<head>
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width" />
-		<title>Buffet Booking - RedRes</title>
+		<title>Buffet Reservation | RedRes</title>
+		<link rel="preconnect" href="https://fonts.googleapis.com">
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+		<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap" rel="stylesheet">
 		<script src="https://cdn.tailwindcss.com"></script>
+		<style>
+			body { font-family: 'Plus Jakarta Sans', sans-serif; }
+			h1, h2, h3, h4, .font-serif { font-family: 'Playfair Display', serif; }
+			.glass { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px); }
+		</style>
 	</head>
-	<body class="bg-gray-50 font-sans min-h-screen">
-		<nav class="bg-white shadow-sm p-4">
-			<div class="max-w-4xl mx-auto flex justify-between items-center">
-				<a href="/" class="text-xl font-bold text-red-600">← Back to Menu</a>
-				<h1 class="text-xl font-bold">Buffet Reservation</h1>
+	<body class="bg-[#faf9f6] text-slate-900 min-h-screen flex flex-col">
+		
+		<nav class="glass shadow-sm sticky top-0 z-50 border-b border-orange-100">
+			<div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+				<a href="/" class="flex items-center gap-2 text-xl font-bold text-slate-900 group">
+					<span class="text-red-600 group-hover:-translate-x-1 transition-transform">←</span>
+					<span>Back to Menu</span>
+				</a>
+				<div class="text-2xl font-black tracking-tighter text-red-600">RED<span class="text-slate-900">RES</span></div>
+				<div class="w-24"></div> <!-- Spacer for balance -->
 			</div>
 		</nav>
 
-		<main class="max-w-4xl mx-auto px-4 py-8">
-			<div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden grid grid-cols-1 md:grid-cols-2">
-				<!-- Info -->
-				<div class="p-8 bg-red-600 text-white">
-					<h2 class="text-3xl font-bold mb-4">{buffetData?.title || 'Grand Buffet'}</h2>
-					<p class="opacity-90 mb-6">{buffetData?.description}</p>
+		<main class="flex-1 max-w-5xl mx-auto px-6 py-12 w-full">
+			<div class="bg-white rounded-[2.5rem] shadow-2xl border border-slate-100 overflow-hidden flex flex-col lg:flex-row">
+				<!-- Content Column -->
+				<div class="lg:w-2/5 p-10 bg-slate-900 text-white relative overflow-hidden">
+					<div class="absolute top-0 left-0 w-full h-full bg-red-600/10 blur-[80px] -translate-x-1/2 -translate-y-1/2"></div>
 					
-					<div class="space-y-4">
-						<div class="flex justify-between border-b border-red-500 pb-2">
-							<span>Adult</span>
-							<span class="font-bold">${buffetData?.priceAdult}</span>
+					<div class="relative z-10">
+						<h5 class="text-xs uppercase tracking-[0.4em] font-black text-red-500 mb-6">Reservation</h5>
+						<h2 class="text-5xl font-black mb-6 leading-tight">{buffetData?.title || 'The Grand Buffet Experience'}</h2>
+						<p class="text-slate-400 text-lg leading-relaxed mb-10">{buffetData?.description || 'A symphony of flavors waiting to be explored. From prime cuts to artisanal desserts.'}</p>
+						
+						<div class="space-y-6">
+							<div class="flex justify-between items-center bg-white/5 p-4 rounded-2xl border border-white/10">
+								<span class="text-slate-300 font-bold uppercase tracking-wider text-xs">Adult Entry</span>
+								<span class="text-2xl font-black text-red-500">${buffetData?.priceAdult || '45.00'}</span>
+							</div>
+							<div class="flex justify-between items-center bg-white/5 p-4 rounded-2xl border border-white/10">
+								<span class="text-slate-300 font-bold uppercase tracking-wider text-xs">Child (7-14 yrs)</span>
+								<span class="text-2xl font-black text-white">${buffetData?.priceAdult ? (buffetData.priceAdult * 0.5).toFixed(2) : '22.50'}</span>
+							</div>
+							<div class="flex justify-between items-center bg-white/5 p-4 rounded-2xl border border-white/10">
+								<span class="text-slate-300 font-bold uppercase tracking-wider text-xs">Child (1-6 yrs)</span>
+								<span class="text-2xl font-black text-green-400">FREE</span>
+							</div>
 						</div>
-						<div class="flex justify-between border-b border-red-500 pb-2">
-							<span>Child (7-14 yrs)</span>
-							<span class="font-bold">${buffetData?.priceAdult ? (buffetData.priceAdult * 0.5).toFixed(2) : '0.00'}</span>
-						</div>
-						<div class="flex justify-between border-b border-red-500 pb-2">
-							<span>Child (1-6 yrs)</span>
-							<span class="font-bold">FREE</span>
-						</div>
-					</div>
 
-					<div class="mt-8">
-						<h4 class="font-bold mb-2">Available Slots:</h4>
-						<div class="flex gap-2">
-							{buffetData?.availableSlots?.map((slot: string) => (
-								<span class="bg-white text-red-600 px-3 py-1 rounded-full text-sm font-bold capitalize">{slot}</span>
-							))}
+						<div class="mt-12 flex items-center gap-4 text-sm font-bold text-slate-400">
+							<div class="w-8 h-[1px] bg-red-500"></div>
+							<span>Includes welcome drink & live music</span>
 						</div>
 					</div>
 				</div>
 
-				<!-- Form -->
-				<div class="p-8">
-					<form id="bookingForm" class="space-y-4">
+				<!-- Booking Form Column -->
+				<div class="lg:w-3/5 p-10 lg:p-14">
+					<form id="bookingForm" class="space-y-8">
+						<div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+							<div>
+								<label class="block text-xs uppercase tracking-widest font-black text-slate-400 mb-3">1. Select Date</label>
+								<input type="date" name="date" required 
+									class="w-full border-2 border-slate-100 rounded-2xl focus:border-red-500 p-4 bg-slate-50 font-bold outline-none transition-all"
+									min={new Date().toISOString().split('T')[0]} 
+								/>
+							</div>
+
+							<div>
+								<label class="block text-xs uppercase tracking-widest font-black text-slate-400 mb-3">2. Choose Slot</label>
+								<div class="flex gap-3">
+									{['lunch', 'dinner'].map((slot) => (
+										<label class="flex-1 cursor-pointer">
+											<input type="radio" name="slot" value={slot} class="hidden peer" required />
+											<div class="text-center py-4 border-2 border-slate-100 rounded-2xl peer-checked:border-red-600 peer-checked:bg-red-50 text-slate-400 peer-checked:text-red-600 font-black transition-all capitalize text-sm">
+												{slot}
+											</div>
+										</label>
+									))}
+								</div>
+							</div>
+						</div>
+
 						<div>
-							<label class="block text-sm font-bold text-gray-700 mb-1">Select Date</label>
-							<input type="date" name="date" required 
-								class="w-full border-gray-200 rounded-lg focus:ring-red-500 focus:border-red-500 p-3 bg-gray-50 border"
-								min={new Date().toISOString().split('T')[0]} 
+							<label class="block text-xs uppercase tracking-widest font-black text-slate-400 mb-3">3. Party Size</label>
+							<div class="grid grid-cols-3 gap-4">
+								<div class="bg-slate-50 p-4 rounded-2xl border-2 border-slate-100">
+									<span class="block text-[10px] font-black uppercase text-slate-400 mb-1">Adults</span>
+									<input type="number" name="adults" value="1" min="1" class="w-full bg-transparent font-black text-lg outline-none" />
+								</div>
+								<div class="bg-slate-50 p-4 rounded-2xl border-2 border-slate-100">
+									<span class="block text-[10px] font-black uppercase text-slate-400 mb-1">Kids (7-14)</span>
+									<input type="number" name="child_mid" value="0" min="0" class="w-full bg-transparent font-black text-lg outline-none" />
+								</div>
+								<div class="bg-slate-50 p-4 rounded-2xl border-2 border-slate-100">
+									<span class="block text-[10px] font-black uppercase text-slate-400 mb-1">Kids (1-6)</span>
+									<input type="number" name="child_small" value="0" min="0" class="w-full bg-transparent font-black text-lg outline-none" />
+								</div>
+							</div>
+						</div>
+
+						<div class="space-y-4">
+							<label class="block text-xs uppercase tracking-widest font-black text-slate-400 mb-3">4. Guest Details</label>
+							<input type="text" name="customer_name" required 
+								class="w-full border-2 border-slate-100 rounded-2xl focus:border-red-500 p-4 bg-slate-50 font-bold outline-none transition-all" 
+								placeholder="Full Name" 
+							/>
+							<input type="tel" name="customer_phone" required 
+								class="w-full border-2 border-slate-100 rounded-2xl focus:border-red-500 p-4 bg-slate-50 font-bold outline-none transition-all" 
+								placeholder="Contact Number" 
 							/>
 						</div>
 
-						<div>
-							<label class="block text-sm font-bold text-gray-700 mb-1">Select Slot</label>
-							<div class="flex gap-4">
-								{buffetData?.availableSlots?.map((slot: string) => (
-									<label class="flex-1 cursor-pointer">
-										<input type="radio" name="slot" value={slot} class="hidden peer" required />
-										<div class="text-center p-3 border rounded-lg peer-checked:border-red-500 peer-checked:bg-red-50 text-gray-600 peer-checked:text-red-600 font-bold transition-all capitalize">
-											{slot}
-										</div>
-									</label>
-								))}
-							</div>
-						</div>
-
-						<div class="grid grid-cols-3 gap-4">
-							<div>
-								<label class="block text-xs font-bold text-gray-500 mb-1">Adults</label>
-								<input type="number" name="adults" value="1" min="1" class="w-full border p-2 rounded-lg" />
-							</div>
-							<div>
-								<label class="block text-xs font-bold text-gray-500 mb-1">Child (7-14)</label>
-								<input type="number" name="child_mid" value="0" min="0" class="w-full border p-2 rounded-lg" />
-							</div>
-							<div>
-								<label class="block text-xs font-bold text-gray-500 mb-1">Child (1-6)</label>
-								<input type="number" name="child_small" value="0" min="0" class="w-full border p-2 rounded-lg" />
-							</div>
-						</div>
-
-						<hr />
-
-						<div>
-							<label class="block text-sm font-bold text-gray-700 mb-1">Your Name</label>
-							<input type="text" name="customer_name" required class="w-full border p-3 rounded-lg" placeholder="Enter your full name" />
-						</div>
-
-						<div>
-							<label class="block text-sm font-bold text-gray-700 mb-1">Phone Number</label>
-							<input type="tel" name="customer_phone" required class="w-full border p-3 rounded-lg" placeholder="017XXXXXXXX" />
-						</div>
-
-						<button type="submit" class="w-full bg-red-600 text-white font-bold py-4 rounded-xl hover:bg-red-700 transition-colors shadow-lg">
-							Submit Booking Request
+						<button type="submit" class="w-full bg-red-600 text-white font-black py-5 rounded-2xl hover:bg-red-700 transition-all shadow-xl hover:shadow-red-200 active:scale-95 uppercase tracking-[0.2em]">
+							Confirm Reservation
 						</button>
 					</form>
 
-					<div id="successMsg" class="hidden text-center py-8">
-						<div class="text-green-500 text-5xl mb-4">✓</div>
-						<h3 class="text-2xl font-bold text-gray-800">Request Sent!</h3>
-						<p class="text-gray-500 mt-2">We will call you soon to confirm your booking.</p>
-						<button onclick="location.reload()" class="mt-6 text-red-600 font-bold underline">Make another booking</button>
+					<div id="successMsg" class="hidden text-center py-20">
+						<div class="w-24 h-24 bg-green-100 text-green-600 rounded-full flex items-center justify-center text-5xl mx-auto mb-8 animate-bounce">✓</div>
+						<h3 class="text-4xl font-black text-slate-900 mb-4">Request Received</h3>
+						<p class="text-slate-500 text-lg max-w-xs mx-auto mb-10">Our concierge will contact you shortly to finalize your booking.</p>
+						<button onclick="location.reload()" class="bg-slate-900 text-white px-8 py-3 rounded-full font-bold uppercase tracking-widest text-xs">New Booking</button>
 					</div>
 				</div>
 			</div>
 		</main>
+
+		<footer class="py-12 text-center text-slate-400 text-xs font-black uppercase tracking-widest">
+			© 2026 RedRes Restaurant Group
+		</footer>
 
 		<script>
 			import { supabase } from '../lib/supabase';
@@ -134,7 +164,7 @@ const buffetData = await client.fetch(`*[_type == "buffet"][0]{
 			form?.addEventListener('submit', async (e) => {
 				e.preventDefault();
 				const btn = form.querySelector('button');
-				if(btn) btn.innerText = 'Sending...';
+				if(btn) btn.innerHTML = '<span class="animate-pulse">Processing...</span>';
 
 				const formData = new FormData(form);
 				const data = {
@@ -152,9 +182,9 @@ const buffetData = await client.fetch(`*[_type == "buffet"][0]{
 
 				if (error) {
 					alert('Error: ' + error.message);
-					if(btn) btn.innerText = 'Submit Booking Request';
+					if(btn) btn.innerText = 'Confirm Reservation';
 				} else {
-					form.classList.add('hidden');
+					form.style.display = 'none';
 					success?.classList.remove('hidden');
 				}
 			});

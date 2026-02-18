@@ -1,17 +1,159 @@
 ---
+import { client } from '../lib/sanity';
 
+let categories = [];
+let sliders = [];
+
+try {
+  categories = await client.fetch(`*[_type == "category"]{
+    title,
+    "items": *[_type == "foodItem" && references(^._id)]{
+      name,
+      description,
+      price,
+      "imageUrl": image.asset->url,
+      attributes
+    }
+  }`);
+
+  sliders = await client.fetch(`*[_type == "slider"] | order(order asc){
+    title,
+    subtitle,
+    "imageUrl": image.asset->url
+  }`);
+} catch (e) {
+  console.error("Sanity fetch error:", e);
+}
 ---
 
 <html lang="en">
 	<head>
 		<meta charset="utf-8" />
 		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<link rel="icon" href="/favicon.ico" />
 		<meta name="viewport" content="width=device-width" />
-		<meta name="generator" content={Astro.generator} />
-		<title>Astro</title>
+		<title>RedRes Restaurant</title>
+		<script src="https://cdn.tailwindcss.com"></script>
 	</head>
-	<body>
-		<h1>Astro</h1>
+	<body class="bg-gray-50 font-sans">
+		
+		<!-- Navigation -->
+		<nav class="bg-white shadow-sm sticky top-0 z-50">
+			<div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
+				<h1 class="text-2xl font-bold text-red-600">RedRes</h1>
+				<div class="space-x-6 text-gray-600 font-medium">
+					<a href="/" class="hover:text-red-500">Home</a>
+					<a href="#menu" class="hover:text-red-500">Food Menu</a>
+					<a href="/buffet" class="hover:text-red-500 text-red-600 font-bold underline">Buffet Booking</a>
+					<a href="#contact" class="hover:text-red-500">Contact</a>
+				</div>
+			</div>
+		</nav>
+
+		<!-- Hero Slider -->
+		<div class="relative h-[500px] overflow-hidden bg-gray-900">
+			{sliders.length > 0 ? sliders.map((slider: any) => (
+				<div class="absolute inset-0">
+					<img src={slider.imageUrl} class="w-full h-full object-cover opacity-60" alt={slider.title} />
+					<div class="absolute inset-0 flex flex-col justify-center items-center text-white text-center p-4">
+						<h2 class="text-5xl font-bold mb-4">{slider.title}</h2>
+						<p class="text-xl max-w-2xl">{slider.subtitle}</p>
+					</div>
+				</div>
+			)) : (
+				<div class="flex items-center justify-center h-full text-white">
+					<p class="text-xl italic opacity-50">Add slider images in Sanity to see them here.</p>
+				</div>
+			)}
+		</div>
+
+		<!-- Search Bar -->
+		<div class="max-w-4xl mx-auto -mt-8 relative z-10 px-4">
+			<div class="bg-white rounded-full shadow-lg p-2 flex items-center border border-gray-200">
+				<span class="pl-4 text-gray-400">
+					<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+					</svg>
+				</span>
+				<input type="text" placeholder="Search for your favorite food..." class="w-full px-4 py-3 rounded-full focus:outline-none text-lg" id="foodSearch" />
+			</div>
+		</div>
+
+		<!-- Menu Section -->
+		<div id="menu" class="max-w-6xl mx-auto px-4 py-16 min-h-[400px]">
+			{categories.length > 0 ? categories.map((cat: any) => (
+				<div class="mb-12 food-category" data-title={cat.title}>
+					<h3 class="text-3xl font-bold mb-8 border-l-4 border-red-500 pl-4">{cat.title}</h3>
+					<div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+						{cat.items?.map((item: any) => (
+							<div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex gap-4 hover:shadow-md transition-shadow food-item" data-name={item.name}>
+								<img src={item.imageUrl} class="w-32 h-32 object-cover rounded-lg bg-gray-100" alt={item.name} />
+								<div class="flex-1">
+									<div class="flex justify-between items-start">
+										<h4 class="text-xl font-bold">{item.name}</h4>
+										<span class="text-red-600 font-bold">${item.price}</span>
+									</div>
+									<p class="text-gray-500 text-sm mt-2 line-clamp-2">{item.description}</p>
+									{item.attributes && (
+										<div class="mt-3 flex flex-wrap gap-2">
+											{item.attributes.map((attr: any) => (
+												<span class="text-[10px] bg-gray-100 px-2 py-1 rounded uppercase font-bold text-gray-600">
+													{attr.label} (+${attr.price})
+												</span>
+											))}
+										</div>
+									)}
+									<button class="mt-4 bg-red-600 text-white px-4 py-1.5 rounded-lg text-sm font-bold hover:bg-red-700 transition-colors">Add to Cart</button>
+								</div>
+							</div>
+						))}
+					</div>
+				</div>
+			)) : (
+				<div class="text-center py-20 bg-white rounded-2xl border-2 border-dashed border-gray-200">
+					<h3 class="text-2xl font-bold text-gray-400">Your Menu is Empty</h3>
+					<p class="text-gray-400 mt-2">Log in to <a href="https://redres.sanity.studio" class="text-red-500 underline">Sanity Studio</a> to add food items.</p>
+				</div>
+			)}
+		</div>
+
+		<!-- Contact/Footer -->
+		<footer id="contact" class="bg-gray-900 text-white py-16 mt-16">
+			<div class="max-w-6xl mx-auto px-4 grid grid-cols-1 md:grid-cols-3 gap-12">
+				<div>
+					<h5 class="text-xl font-bold mb-6 italic">RedRes Restaurant</h5>
+					<p class="text-gray-400">Providing the best BBQ and Buffet experience in the city.</p>
+				</div>
+				<div>
+					<h5 class="text-xl font-bold mb-6 uppercase tracking-wider">How to Order</h5>
+					<ul class="text-gray-400 space-y-2">
+						<li>1. Select your food</li>
+						<li>2. Add to cart</li>
+						<li>3. Checkout & Pay</li>
+						<li>4. Enjoy your meal!</li>
+					</ul>
+				</div>
+				<div>
+					<h5 class="text-xl font-bold mb-6 uppercase tracking-wider">Contact Info</h5>
+					<p class="text-gray-400">Phone: (303) 555-0105</p>
+					<p class="text-gray-400">Email: mail@example.com</p>
+					<p class="text-gray-400 mt-4">Address: 2972 Westheimer Rd. Santa Ana, Illinois 85486</p>
+				</div>
+			</div>
+		</footer>
+
+		<script>
+			const searchInput = document.getElementById('foodSearch');
+			searchInput?.addEventListener('input', (e) => {
+				const term = (e.target as HTMLInputElement).value.toLowerCase();
+				document.querySelectorAll('.food-item').forEach(item => {
+					const name = (item as HTMLElement).dataset.name?.toLowerCase() || '';
+					(item as HTMLElement).style.display = name.includes(term) ? 'flex' : 'none';
+				});
+				document.querySelectorAll('.food-category').forEach(cat => {
+					const visibleItems = (cat as HTMLElement).querySelectorAll('.food-item[style="display: flex;"]');
+					(cat as HTMLElement).style.display = visibleItems.length > 0 ? 'block' : 'none';
+				});
+			});
+		</script>
 	</body>
 </html>

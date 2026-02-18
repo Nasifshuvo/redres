@@ -1,0 +1,100 @@
+---
+// Simple password protection for demo
+// In a real app, use Supabase Auth
+---
+
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width" />
+		<title>Staff Dashboard - RedRes</title>
+		<script src="https://cdn.tailwindcss.com"></script>
+	</head>
+	<body class="bg-gray-100 font-sans min-h-screen">
+		<nav class="bg-gray-900 text-white p-4">
+			<div class="max-w-6xl mx-auto flex justify-between items-center">
+				<h1 class="text-xl font-bold italic">RedRes Staff Panel</h1>
+				<a href="/web/public" class="text-sm opacity-70">View Site</a>
+			</div>
+		</nav>
+
+		<main class="max-w-6xl mx-auto px-4 py-8">
+			<h2 class="text-2xl font-bold mb-6">Recent Booking Requests</h2>
+			
+			<div class="bg-white rounded-xl shadow-sm overflow-hidden">
+				<table class="w-full text-left border-collapse">
+					<thead class="bg-gray-50 border-b">
+						<tr>
+							<th class="p-4 font-bold text-gray-600">Customer</th>
+							<th class="p-4 font-bold text-gray-600">Date/Slot</th>
+							<th class="p-4 font-bold text-gray-600">Party</th>
+							<th class="p-4 font-bold text-gray-600">Status</th>
+							<th class="p-4 font-bold text-gray-600 text-right">Actions</th>
+						</tr>
+					</thead>
+					<tbody id="bookingsList">
+						<!-- Loaded via JS -->
+					</tbody>
+				</table>
+			</div>
+		</main>
+
+		<script>
+			import { supabase } from '../lib/supabase';
+
+			async function fetchBookings() {
+				const { data, error } = await supabase
+					.from('bookings')
+					.select('*')
+					.order('created_at', { ascending: false });
+
+				if (data) {
+					const list = document.getElementById('bookingsList');
+					if(!list) return;
+					list.innerHTML = data.map(b => `
+						<tr class="border-b hover:bg-gray-50 transition-colors">
+							<td class="p-4">
+								<div class="font-bold text-gray-800">${b.name}</div>
+								<div class="text-xs text-gray-500">${b.phone}</div>
+							</td>
+							<td class="p-4 capitalize">
+								<div class="text-sm font-medium">${b.date}</div>
+								<span class="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-bold">${b.slot}</span>
+							</td>
+							<td class="p-4 text-sm">
+								${b.adults} Ad, ${b.children_7_14} Mid, ${b.children_1_6} Small
+							</td>
+							<td class="p-4">
+								<span class="px-2 py-1 rounded-full text-xs font-bold ${
+									b.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+									b.status === 'approved' ? 'bg-green-100 text-green-700' :
+									'bg-red-100 text-red-700'
+								}">${b.status}</span>
+							</td>
+							<td class="p-4 text-right space-x-2">
+								${b.status === 'pending' ? `
+									<button data-id="${b.id}" data-action="approved" class="action-btn text-green-600 hover:underline font-bold text-sm">Approve</button>
+									<button data-id="${b.id}" data-action="denied" class="action-btn text-red-600 hover:underline font-bold text-sm">Deny</button>
+								` : ''}
+							</td>
+						</tr>
+					`).join('');
+
+					document.querySelectorAll('.action-btn').forEach(btn => {
+						btn.addEventListener('click', async (e) => {
+							const id = (e.target as HTMLElement).dataset.id;
+							const status = (e.target as HTMLElement).dataset.action;
+							const { error } = await supabase
+								.from('bookings')
+								.update({ status })
+								.eq('id', id);
+							if(!error) fetchBookings();
+						});
+					});
+				}
+			}
+
+			fetchBookings();
+		</script>
+	</body>
+</html>

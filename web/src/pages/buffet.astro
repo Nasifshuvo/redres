@@ -1,0 +1,163 @@
+---
+import { client } from '../lib/sanity';
+
+const buffetData = await client.fetch(`*[_type == "buffet"][0]{
+  title,
+  description,
+  priceAdult,
+  "images": images[].asset->url,
+  availableSlots,
+  enabledDates
+}`);
+---
+
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width" />
+		<title>Buffet Booking - RedRes</title>
+		<script src="https://cdn.tailwindcss.com"></script>
+	</head>
+	<body class="bg-gray-50 font-sans min-h-screen">
+		<nav class="bg-white shadow-sm p-4">
+			<div class="max-w-4xl mx-auto flex justify-between items-center">
+				<a href="/web/public" class="text-xl font-bold text-red-600">← Back to Menu</a>
+				<h1 class="text-xl font-bold">Buffet Reservation</h1>
+			</div>
+		</nav>
+
+		<main class="max-w-4xl mx-auto px-4 py-8">
+			<div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden grid grid-cols-1 md:grid-cols-2">
+				<!-- Info -->
+				<div class="p-8 bg-red-600 text-white">
+					<h2 class="text-3xl font-bold mb-4">{buffetData?.title || 'Grand Buffet'}</h2>
+					<p class="opacity-90 mb-6">{buffetData?.description}</p>
+					
+					<div class="space-y-4">
+						<div class="flex justify-between border-b border-red-500 pb-2">
+							<span>Adult</span>
+							<span class="font-bold">${buffetData?.priceAdult}</span>
+						</div>
+						<div class="flex justify-between border-b border-red-500 pb-2">
+							<span>Child (7-14 yrs)</span>
+							<span class="font-bold">${buffetData?.priceAdult ? (buffetData.priceAdult * 0.5).toFixed(2) : '0.00'}</span>
+						</div>
+						<div class="flex justify-between border-b border-red-500 pb-2">
+							<span>Child (1-6 yrs)</span>
+							<span class="font-bold">FREE</span>
+						</div>
+					</div>
+
+					<div class="mt-8">
+						<h4 class="font-bold mb-2">Available Slots:</h4>
+						<div class="flex gap-2">
+							{buffetData?.availableSlots?.map((slot: string) => (
+								<span class="bg-white text-red-600 px-3 py-1 rounded-full text-sm font-bold capitalize">{slot}</span>
+							))}
+						</div>
+					</div>
+				</div>
+
+				<!-- Form -->
+				<div class="p-8">
+					<form id="bookingForm" class="space-y-4">
+						<div>
+							<label class="block text-sm font-bold text-gray-700 mb-1">Select Date</label>
+							<input type="date" name="date" required 
+								class="w-full border-gray-200 rounded-lg focus:ring-red-500 focus:border-red-500 p-3 bg-gray-50 border"
+								min={new Date().toISOString().split('T')[0]} 
+							/>
+						</div>
+
+						<div>
+							<label class="block text-sm font-bold text-gray-700 mb-1">Select Slot</label>
+							<div class="flex gap-4">
+								{buffetData?.availableSlots?.map((slot: string) => (
+									<label class="flex-1 cursor-pointer">
+										<input type="radio" name="slot" value={slot} class="hidden peer" required />
+										<div class="text-center p-3 border rounded-lg peer-checked:border-red-500 peer-checked:bg-red-50 text-gray-600 peer-checked:text-red-600 font-bold transition-all capitalize">
+											{slot}
+										</div>
+									</label>
+								))}
+							</div>
+						</div>
+
+						<div class="grid grid-cols-3 gap-4">
+							<div>
+								<label class="block text-xs font-bold text-gray-500 mb-1">Adults</label>
+								<input type="number" name="adults" value="1" min="1" class="w-full border p-2 rounded-lg" />
+							</div>
+							<div>
+								<label class="block text-xs font-bold text-gray-500 mb-1">Child (7-14)</label>
+								<input type="number" name="child_mid" value="0" min="0" class="w-full border p-2 rounded-lg" />
+							</div>
+							<div>
+								<label class="block text-xs font-bold text-gray-500 mb-1">Child (1-6)</label>
+								<input type="number" name="child_small" value="0" min="0" class="w-full border p-2 rounded-lg" />
+							</div>
+						</div>
+
+						<hr />
+
+						<div>
+							<label class="block text-sm font-bold text-gray-700 mb-1">Your Name</label>
+							<input type="text" name="customer_name" required class="w-full border p-3 rounded-lg" placeholder="Enter your full name" />
+						</div>
+
+						<div>
+							<label class="block text-sm font-bold text-gray-700 mb-1">Phone Number</label>
+							<input type="tel" name="customer_phone" required class="w-full border p-3 rounded-lg" placeholder="017XXXXXXXX" />
+						</div>
+
+						<button type="submit" class="w-full bg-red-600 text-white font-bold py-4 rounded-xl hover:bg-red-700 transition-colors shadow-lg">
+							Submit Booking Request
+						</button>
+					</form>
+
+					<div id="successMsg" class="hidden text-center py-8">
+						<div class="text-green-500 text-5xl mb-4">✓</div>
+						<h3 class="text-2xl font-bold text-gray-800">Request Sent!</h3>
+						<p class="text-gray-500 mt-2">We will call you soon to confirm your booking.</p>
+						<button onclick="location.reload()" class="mt-6 text-red-600 font-bold underline">Make another booking</button>
+					</div>
+				</div>
+			</div>
+		</main>
+
+		<script>
+			import { supabase } from '../lib/supabase';
+
+			const form = document.getElementById('bookingForm') as HTMLFormElement;
+			const success = document.getElementById('successMsg');
+
+			form?.addEventListener('submit', async (e) => {
+				e.preventDefault();
+				const btn = form.querySelector('button');
+				if(btn) btn.innerText = 'Sending...';
+
+				const formData = new FormData(form);
+				const data = {
+					name: formData.get('customer_name'),
+					phone: formData.get('customer_phone'),
+					date: formData.get('date'),
+					slot: formData.get('slot'),
+					adults: parseInt(formData.get('adults') as string),
+					children_7_14: parseInt(formData.get('child_mid') as string),
+					children_1_6: parseInt(formData.get('child_small') as string),
+					status: 'pending'
+				};
+
+				const { error } = await supabase.from('bookings').insert([data]);
+
+				if (error) {
+					alert('Error: ' + error.message);
+					if(btn) btn.innerText = 'Submit Booking Request';
+				} else {
+					form.classList.add('hidden');
+					success?.classList.remove('hidden');
+				}
+			});
+		</script>
+	</body>
+</html>
